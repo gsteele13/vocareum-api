@@ -29,11 +29,7 @@ class Vocareum_course:
     def PUT(self, url_add, data):
         url = self.base_url + url_add
         data_string = json.dumps(data, indent = 4)
-        print("URL:")
-        print(url)
-        print("Data:")
-        print(data_string)
-        r = requests.put(url, data = data_str, headers=self.auth_headers)
+        r = requests.put(url, data = data_string, headers=self.auth_headers)
         print(r.json())
 
     def zip_and_encode_files(self, file_list):
@@ -48,18 +44,26 @@ class Vocareum_course:
         with open("tmp.zip", "rb") as file:
             return base64.b64encode(file.read()).decode("utf-8")
         
-    def update_asnlib(self, asnlib_folder, assignment_index, part_index):
+    def set_part_name(self, name, assignment_index, part_index):
         data = {}
-        content_dict = {}
-        content_dict['target'] = "asnlib"
-        content_dict['zipcontent'] = self.zip_and_encode_folder(asnlib_folder)
-        data['content'] = [content_dict] 
-        
+        data['name'] = name
+        assignment_id = self.assignment_list[assignment_index].info['id']
+        part_id = self.assignment_list[assignment_index].parts[part_index]['id']
+        url_add = f"/assignments/{assignment_id}/parts/{part_id}"
+        self.PUT(url_add, data)
+      
+    def update_asnlib(self, asnlib_folder, assignment_index, part_index):
         assignment_id = self.assignment_list[assignment_index].info['id']
         part_id = self.assignment_list[assignment_index].parts[part_index]['id']
         assignment_name = self.assignment_list[assignment_index].info['name']
         part_name = self.assignment_list[assignment_index].parts[part_index]['name']
         print("Uploading asnlib files in %s to:\n%s\n    %s" % (asnlib_folder, assignment_name, part_name))
+        
+        data = {}
+        content_dict = {}
+        content_dict['target'] = "asnlib"
+        content_dict['zipcontent'] = self.zip_and_encode_folder(asnlib_folder)
+        data['content'] = [content_dict]
         
         url_add = f"/assignments/{assignment_id}/parts/{part_id}"
         print(url_add)
