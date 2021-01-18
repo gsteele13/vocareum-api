@@ -2,13 +2,14 @@ import requests
 import json
 from zipfile import ZipFile
 import base64
-import shutil
-        
+import glob
+import os
+
 class Assignment:
     def __init__(self, info):
         self.info = info
         self.parts = []
-        
+
 class Vocareum_course:
     '''A class for handling requests to a vocareum course via the rest API'''
     
@@ -29,18 +30,21 @@ class Vocareum_course:
     def PUT(self, url_add, data):
         url = self.base_url + url_add
         data_string = json.dumps(data, indent = 4)
-        r = requests.put(url, data = data_string, headers=self.auth_headers)
-        print(r.json())
+        return requests.put(url, data = data_string, headers=self.auth_headers)
 
     def zip_and_encode_files(self, file_list):
-        with ZipFile("tmp.zip", "w") as zip:
+        with ZipFile("tmp.zip", "w") as zipfile:
             for filename in file_list:
-                zip.write(filename)
+                zipfile.write(filename, os.path.basename(filename))
         with open("tmp.zip", "rb") as file:
             return base64.b64encode(file.read()).decode("utf-8")
     
     def zip_and_encode_folder(self, folder):
-        shutil.make_archive("tmp", 'zip', "resource/asnlib/")
+        files = glob.glob(folder + "/**", recursive=True)
+        files_zip = [f[len(folder)+1:] for f in files if os.path.isfile(f)]
+        with ZipFile("tmp.zip", "w") as zipfile:
+            for file, file_zip in zip(files, files_zip):
+                zipfile.write(file, file_zip)
         with open("tmp.zip", "rb") as file:
             return base64.b64encode(file.read()).decode("utf-8")
         
@@ -50,38 +54,39 @@ class Vocareum_course:
         assignment_id = self.assignment_list[assignment_index].info['id']
         part_id = self.assignment_list[assignment_index].parts[part_index]['id']
         url_add = f"/assignments/{assignment_id}/parts/{part_id}"
-        self.PUT(url_add, data)
+        print(self.PUT(url_add, data))
       
-    def update_asnlib(self, asnlib_folder, assignment_index, part_index):
+    def update_asnlib(self, asnlib_folder, assignment_index, part_index, update=1):
         assignment_id = self.assignment_list[assignment_index].info['id']
         part_id = self.assignment_list[assignment_index].parts[part_index]['id']
         assignment_name = self.assignment_list[assignment_index].info['name']
         part_name = self.assignment_list[assignment_index].parts[part_index]['name']
-        print("Uploading asnlib files in %s to:\n%s\n    %s" % (asnlib_folder, assignment_name, part_name))
+        print("Uploading asnlib files in '%s' to:\n%s\n    %s" % (asnlib_folder, assignment_name, part_name))
         
         data = {}
+        data['update'] = update
         content_dict = {}
         content_dict['target'] = "asnlib"
         content_dict['zipcontent'] = self.zip_and_encode_folder(asnlib_folder)
         data['content'] = [content_dict]
         
         url_add = f"/assignments/{assignment_id}/parts/{part_id}"
-        print(url_add)
-        self.PUT(url_add, data)
+        print(self.PUT(url_add, data))
 
-    def release_notebook(self, notebook_file, assignment_index, part_index):
+    def release_notebook(self, notebook_file, assignment_index, part_index, update=1):
         data = {}
         data['type'] = 'jupyter'
         data['zipfile'] = self.zip_and_encode_files([notebook_file])
+        data['update'] = update
         
         assignment_id = self.assignment_list[assignment_index].info['id']
         part_id = self.assignment_list[assignment_index].parts[part_index]['id']
         assignment_name = self.assignment_list[assignment_index].info['name']
         part_name = self.assignment_list[assignment_index].parts[part_index]['name']
-        print("Uploading %s to:\n%s\n    %s" % (notebook_file, assignment_name, part_name))
+        print("Uploading '%s' to:\n%s\n    %s" % (notebook_file, assignment_name, part_name))
         
         url_add = f"/assignments/{assignment_id}/parts/{part_id}/release"
-        self.PUT(url_add, data)
+        print(self.PUT(url_add, data))
  
     def GET_pages(self, url_add, data):
         # Ironically, pagination did not make life easier...
@@ -113,11 +118,6 @@ class Vocareum_course:
         for p in pages:
             parts_list += p['parts']
         return parts_list
-    
-    def release_part(self, notebook_file, i, j):
-        assignment_id = self.assignment_list[i].info["id"]
-        part_id = self.assignment_list[i].parts[j]["id"]
-        url
         
     def print_assignments(self, parts=True):
         print()
