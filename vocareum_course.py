@@ -41,7 +41,8 @@ class Vocareum_course:
     
     def zip_and_encode_folder(self, folder):
         files = glob.glob(folder + "/**", recursive=True)
-        files_zip = [f[len(folder)+1:] for f in files if os.path.isfile(f)]
+        files = [f for f in files if os.path.isfile(f)]
+        files_zip = [f[len(folder)+1:] for f in files]
         with ZipFile("tmp.zip", "w") as zipfile:
             for file, file_zip in zip(files, files_zip):
                 zipfile.write(file, file_zip)
@@ -56,7 +57,7 @@ class Vocareum_course:
         url_add = f"/assignments/{assignment_id}/parts/{part_id}"
         print(self.PUT(url_add, data))
       
-    def update_asnlib(self, asnlib_folder, assignment_index, part_index, update=1):
+    def update_asnlib(self, asnlib_folder, assignment_index, part_index, update=1, debug=False):
         assignment_id = self.assignment_list[assignment_index].info['id']
         part_id = self.assignment_list[assignment_index].parts[part_index]['id']
         assignment_name = self.assignment_list[assignment_index].info['name']
@@ -71,7 +72,10 @@ class Vocareum_course:
         data['content'] = [content_dict]
         
         url_add = f"/assignments/{assignment_id}/parts/{part_id}"
-        print(self.PUT(url_add, data))
+        r = self.PUT(url_add, data)
+        print(r)
+        if debug:
+            print(r.json())
 
     def release_notebook(self, notebook_file, assignment_index, part_index, update=1):
         data = {}
