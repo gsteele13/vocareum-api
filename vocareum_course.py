@@ -18,7 +18,7 @@ class Vocareum_course:
         self.course_id = course_id
         self.assignment_list = []
         self.base_url = 'https://api.vocareum.com/api/v2/courses/' + str(course_id) 
-        self.auth_headers = {'Authorization': 'Token ' + token}
+        self.auth_headers = {'Authorization': 'Token ' + token, 'Content-type': 'application/json'}
 
     def GET(self, url_add, data):
         url = self.base_url + url_add
@@ -31,6 +31,12 @@ class Vocareum_course:
         url = self.base_url + url_add
         data_string = json.dumps(data, indent = 4)
         return requests.put(url, data = data_string, headers=self.auth_headers)
+    
+    def POST(self, url_add, data):
+        url = self.base_url + url_add
+        data_string = json.dumps(data, indent = 4)
+        #print(data_string)
+        return requests.post(url, data=data_string, headers=self.auth_headers)
 
     def zip_and_encode_files(self, file_list):
         with ZipFile("tmp.zip", "w") as zipfile:
@@ -49,6 +55,28 @@ class Vocareum_course:
         with open("tmp.zip", "rb") as file:
             return base64.b64encode(file.read()).decode("utf-8")
         
+    def add_rubric(self, rubric, assignment_index, part_index):
+        '''Accepts a list of rubric dictionaries with keys "text" and "points"'''
+        voc_rubric_list = []
+        print("Adding:\n")
+        for r in rubric:
+            print(r['text'])
+            voc_item = {}
+            voc_item['name'] = r['text']
+            voc_item['maxscore'] = r['points']
+            voc_item['exclude'] = 0
+            voc_item['auto']= 0
+            voc_rubric_list.append(voc_item)
+        data = {}
+        data['rubrics'] = voc_rubric_list
+        assignment_id = self.assignment_list[assignment_index].info['id']
+        part_id = self.assignment_list[assignment_index].parts[part_index]['id']
+        url_add = f"/assignments/{assignment_id}/parts/{part_id}/rubrics"
+        r = self.POST(url_add, data)
+        print(r)
+        if "error" in r.json():
+            print(r.json())
+        
     def set_part_name(self, name, assignment_index, part_index):
         data = {}
         data['name'] = name
@@ -57,7 +85,7 @@ class Vocareum_course:
         url_add = f"/assignments/{assignment_id}/parts/{part_id}"
         print(self.PUT(url_add, data))
       
-    def update_asnlib(self, asnlib_folder, assignment_index, part_index, update=1, debug=False):
+    def update_asnlib(self, asnlib_folder, assignment_index, part_index, update=1):
         assignment_id = self.assignment_list[assignment_index].info['id']
         part_id = self.assignment_list[assignment_index].parts[part_index]['id']
         assignment_name = self.assignment_list[assignment_index].info['name']
@@ -74,7 +102,7 @@ class Vocareum_course:
         url_add = f"/assignments/{assignment_id}/parts/{part_id}"
         r = self.PUT(url_add, data)
         print(r)
-        if debug:
+        if "error" in r.json():
             print(r.json())
 
     def release_notebook(self, notebook_file, assignment_index, part_index, update=1):
@@ -90,7 +118,10 @@ class Vocareum_course:
         print("Uploading '%s' to:\n%s\n    %s" % (notebook_file, assignment_name, part_name))
         
         url_add = f"/assignments/{assignment_id}/parts/{part_id}/release"
-        print(self.PUT(url_add, data))
+        r = self.PUT(url_add, data)
+        print(r)
+        if "error" in r.json():
+            print(r.json())
  
     def GET_pages(self, url_add, data):
         # Ironically, pagination did not make life easier...
@@ -106,6 +137,26 @@ class Vocareum_course:
             responses.append(r)
         return responses
     
+    def check_rubric(self, assignment_index, part_index):
+        assignment_id = self.assignment_list[assignment_index].info['id']
+        part_id = self.assignment_list[assignment_index].parts[part_index]['id']
+        url_add = f"/assignments/{assignment_id}/parts/{part_id}/rubrics"
+        # Vocareum bug: total_records is incorrect for rubrics! crap.
+        # A nasty hack...
+        pages = []
+        i=0
+        pages.append(self.GET(url_add, {"page": i}))
+        while len(pages[-1]['rubrics']) > 0:
+            i += 1
+            pages.append(self.GET(url_add, {"page": i}))
+        print("\r", end="")
+        total_points = 0
+        for p in pages:
+            for r in p['rubrics']:
+                print(f"({r['maxscore']})", r['name'])
+                total_points += float(r['maxscore'])
+        print("Total points:", total_points)
+        
     def fetch_assignments(self):
         pages = self.GET_pages("/assignments", {})
         self.assignment_list = []
