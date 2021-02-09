@@ -19,23 +19,37 @@ class Vocareum_course:
         self.assignment_list = []
         self.base_url = 'https://api.vocareum.com/api/v2/courses/' + str(course_id) 
         self.auth_headers = {'Authorization': 'Token ' + token, 'Content-type': 'application/json'}
+        self.debug_request = False
+    
+    def print_request(self, url, data_string):
+        print("URL:\n" + url)
+        print("Headers:\n" + json.dumps(self.auth_headers))
+        print("Data:\n" + data_string)
 
     def GET(self, url_add, data):
         url = self.base_url + url_add
         data_string = json.dumps(data, indent = 4)
         print(".", end="")
+        if self.debug_request:
+            print("HTTP GET\n")
+            self.print_request(url, data_string)
         r = requests.get(url, headers=self.auth_headers, data=data_string)
         return r.json()
     
     def PUT(self, url_add, data):
         url = self.base_url + url_add
         data_string = json.dumps(data, indent = 4)
+        if self.debug_request:
+            print("HTTP PUT\n")
+            self.print_request(url, data_string)
         return requests.put(url, data = data_string, headers=self.auth_headers)
     
     def POST(self, url_add, data):
         url = self.base_url + url_add
         data_string = json.dumps(data, indent = 4)
-        #print(data_string)
+        if self.debug_request:
+            print("HTTP POST\n")
+            self.print_request(url, data_string)
         return requests.post(url, data=data_string, headers=self.auth_headers)
 
     def zip_and_encode_files(self, file_list):
@@ -54,6 +68,11 @@ class Vocareum_course:
                 zipfile.write(file, file_zip)
         with open("tmp.zip", "rb") as file:
             return base64.b64encode(file.read()).decode("utf-8")
+    
+    def print_response(self, r):
+        print(r)
+        if "error" in r.json():
+            print("\x1b[31m" + str(r.json()) + "\x1b[0m")        
         
     def add_rubric(self, rubric, assignment_index, part_index):
         '''Accepts a list of rubric dictionaries with keys "text" and "points"'''
@@ -72,10 +91,7 @@ class Vocareum_course:
         assignment_id = self.assignment_list[assignment_index].info['id']
         part_id = self.assignment_list[assignment_index].parts[part_index]['id']
         url_add = f"/assignments/{assignment_id}/parts/{part_id}/rubrics"
-        r = self.POST(url_add, data)
-        print(r)
-        if "error" in r.json():
-            print(r.json())
+        self.print_response(self.POST(url_add, data))
         
     def set_part_name(self, name, assignment_index, part_index):
         data = {}
@@ -100,10 +116,7 @@ class Vocareum_course:
         data['content'] = [content_dict]
         
         url_add = f"/assignments/{assignment_id}/parts/{part_id}"
-        r = self.PUT(url_add, data)
-        print(r)
-        if "error" in r.json():
-            print(r.json())
+        self.print_response(self.PUT(url_add, data))
 
     def release_notebook(self, notebook_file, assignment_index, part_index, update=1):
         data = {}
@@ -118,10 +131,7 @@ class Vocareum_course:
         print("Uploading '%s' to:\n%s\n    %s" % (notebook_file, assignment_name, part_name))
         
         url_add = f"/assignments/{assignment_id}/parts/{part_id}/release"
-        r = self.PUT(url_add, data)
-        print(r)
-        if "error" in r.json():
-            print(r.json())
+        self.print_response(self.PUT(url_add, data))
  
     def GET_pages(self, url_add, data):
         # Ironically, pagination did not make life easier...
@@ -185,3 +195,5 @@ class Vocareum_course:
                 for part in A.parts:
                     print("     " + part['name'],  "(j = %d, id %s)" % (j, part['id']))
                     j+=1
+
+
