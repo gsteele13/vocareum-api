@@ -13,11 +13,11 @@ class Assignment:
 class Vocareum_course:
     '''A class for handling requests to a vocareum course via the rest API'''
     
-    def __init__(self, token, course_id):
+    def __init__(self, token, course_id, url='https://api.vocareum.com/api/v2/courses/'):
         self.token = token
         self.course_id = course_id
         self.assignment_list = []
-        self.base_url = 'https://api.vocareum.com/api/v2/courses/' + str(course_id) 
+        self.base_url = url + str(course_id) 
         self.auth_headers = {'Authorization': 'Token ' + token, 'Content-type': 'application/json'}
         self.debug_request = False
     
@@ -195,5 +195,3 @@ class Vocareum_course:
                 for part in A.parts:
                     print("     " + part['name'],  "(j = %d, id %s)" % (j, part['id']))
                     j+=1
-
-
