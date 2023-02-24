@@ -5,17 +5,17 @@ jupyter:
     text_representation:
       extension: .md
       format_name: markdown
-      format_version: '1.2'
-      jupytext_version: 1.3.0
+      format_version: '1.3'
+      jupytext_version: 1.13.6
   kernelspec:
-    display_name: Python 3
+    display_name: Python 3 (ipykernel)
     language: python
     name: python3
 ---
 
 ```python
 import sys
-from vocareum_course import *
+from vocareum_course import Vocareum_course
 import glob
 ```
 
