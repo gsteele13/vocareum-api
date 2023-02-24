@@ -39,7 +39,9 @@ First, create the course object and fetch the assignment list.
 ```python
 token = "your token generated from vocareum user settings here (don't store it in a public repo!)"
 course_id = your_course_id 
-course = Vocareum_course(token, course_id)
+# Use this to select the EU API entry point URL. Default is US API url entry point.
+url = 'https://api.eu.vocareum.com/api/v2/courses/'
+course = Vocareum_course(token, course_id, url=url)
 course.fetch_assignments()
 course.print_assignments()
 ```
