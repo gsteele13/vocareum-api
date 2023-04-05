@@ -13,13 +13,14 @@ class Assignment:
 class Vocareum_course:
     '''A class for handling requests to a vocareum course via the rest API'''
     
-    def __init__(self, token, course_id, url='https://api.vocareum.com/api/v2/courses/'):
+    def __init__(self, token, course_id, url='https://api.vocareum.com/api/v2/courses/', debug_file_upload=False):
         self.token = token
         self.course_id = course_id
         self.assignment_list = []
         self.base_url = url + str(course_id) 
         self.auth_headers = {'Authorization': 'Token ' + token, 'Content-type': 'application/json'}
         self.debug_request = False
+        self.debug_file_upload = debug_file_upload
     
     def print_request(self, url, data_string):
         print("URL:\n" + url)
@@ -55,6 +56,8 @@ class Vocareum_course:
     def zip_and_encode_files(self, file_list):
         with ZipFile("tmp.zip", "w") as zipfile:
             for filename in file_list:
+                if self.debug_file_upload:
+                    print("Adding filename: '%s'" % filename)
                 zipfile.write(filename, os.path.basename(filename))
         with open("tmp.zip", "rb") as file:
             return base64.b64encode(file.read()).decode("utf-8")
